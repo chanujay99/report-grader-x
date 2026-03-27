@@ -14,7 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      lab_sheets: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          lab_id: string
+          name: string
+          rubric: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          lab_id: string
+          name: string
+          rubric?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          lab_id?: string
+          name?: string
+          rubric?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_sheets_lab_id_fkey"
+            columns: ["lab_id"]
+            isOneToOne: true
+            referencedRelation: "labs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labs: {
+        Row: {
+          created_at: string
+          id: string
+          lab_number: number
+          module_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lab_number: number
+          module_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lab_number?: number
+          module_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labs_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modules: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          ai_grade: Json | null
+          created_at: string
+          file_name: string
+          file_path: string
+          final_grade: Json | null
+          id: string
+          lab_id: string
+          status: string
+          student_id: string
+          student_name: string
+          updated_at: string
+          upload_date: string
+        }
+        Insert: {
+          ai_grade?: Json | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          final_grade?: Json | null
+          id?: string
+          lab_id: string
+          status?: string
+          student_id?: string
+          student_name?: string
+          updated_at?: string
+          upload_date?: string
+        }
+        Update: {
+          ai_grade?: Json | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          final_grade?: Json | null
+          id?: string
+          lab_id?: string
+          status?: string
+          student_id?: string
+          student_name?: string
+          updated_at?: string
+          upload_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_lab_id_fkey"
+            columns: ["lab_id"]
+            isOneToOne: false
+            referencedRelation: "labs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
