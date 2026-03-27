@@ -168,18 +168,66 @@ export async function updateReportGrade(reportId: string, grade: GradeResult, fi
   if (error) throw error;
 }
 
+// PDF Text Extraction
+async function extractTextFromPdf(bucket: string, filePath: string): Promise<string> {
+  const { data, error } = await supabase.storage.from(bucket).download(filePath);
+  if (error || !data) throw new Error(`Failed to download file: ${filePath}`);
+
+  const arrayBuffer = await data.arrayBuffer();
+  const pdfjsLib = await import('pdfjs-dist');
+  
+  // Use the bundled worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+  const textParts: string[] = [];
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items
+      .map((item: any) => item.str)
+      .join(' ');
+    textParts.push(`--- Page ${i} ---\n${pageText}`);
+  }
+  
+  return textParts.join('\n\n');
+}
+
+async function extractTextFromFile(bucket: string, filePath: string, fileName: string): Promise<string> {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  
+  if (ext === 'pdf') {
+    return extractTextFromPdf(bucket, filePath);
+  }
+  
+  // For non-PDF files (txt, doc, etc.), try to read as text
+  const { data, error } = await supabase.storage.from(bucket).download(filePath);
+  if (error || !data) throw new Error(`Failed to download file: ${filePath}`);
+  return await data.text();
+}
+
 // AI Assessment
 export async function assessReport(
   reportFilePath: string,
   labSheetFilePath: string | null,
   rubric: { sections: any[]; totalMax: number },
-  studentName: string
+  studentName: string,
+  reportFileName: string,
+  labSheetFileName?: string
 ): Promise<GradeResult & { model: string }> {
-  // Try to download and extract text from files (simplified - just pass file names)
+  // Extract actual text content from the files
+  const reportContent = await extractTextFromFile('reports', reportFilePath, reportFileName);
+  
+  let labSheetContent: string | null = null;
+  if (labSheetFilePath && labSheetFileName) {
+    labSheetContent = await extractTextFromFile('lab-sheets', labSheetFilePath, labSheetFileName);
+  }
+
   const { data, error } = await supabase.functions.invoke('assess-report', {
     body: {
-      reportContent: `Report file: ${reportFilePath}`,
-      labSheetContent: labSheetFilePath ? `Lab sheet file: ${labSheetFilePath}` : null,
+      reportContent,
+      labSheetContent,
       rubric,
       studentName,
     },

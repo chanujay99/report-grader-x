@@ -64,7 +64,7 @@ export default function LabDetail() {
     if (!report) return;
     setAssessingId(reportId);
     try {
-      const grade = await assessReport(report.file_path, labSheet?.file_path || null, rubric, report.student_name);
+      const grade = await assessReport(report.file_path, labSheet?.file_path || null, rubric, report.student_name, report.file_name, labSheet?.file_name);
       await updateReportGrade(reportId, grade, false);
       qc.invalidateQueries({ queryKey: ['reports', labId] });
       toast.success(`AI assessment complete (${grade.model})`);
