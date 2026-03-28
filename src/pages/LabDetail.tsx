@@ -59,6 +59,16 @@ export default function LabDetail() {
     onError: (e) => toast.error(e.message),
   });
 
+  const deleteReportMut = useMutation({
+    mutationFn: (id: string) => deleteReport(id),
+    onSuccess: (_, deletedId) => {
+      qc.invalidateQueries({ queryKey: ['reports', labId] });
+      if (selectedReport === deletedId) setSelectedReport(null);
+      toast.success('Report deleted');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const handleAIAssess = async (reportId: string) => {
     const report = reports.find((r) => r.id === reportId);
     if (!report) return;
