@@ -88,13 +88,7 @@ export default function LabDetail() {
     }
   };
 
-  const handleBatchAssess = async () => {
-    const pending = reports.filter((r) => r.status === 'pending');
-    if (pending.length === 0) {
-      toast.info('No pending reports to assess');
-      return;
-    }
-    const batch = pending.slice(0, 200);
+  const runBatch = async (batch: typeof reports, label: string) => {
     setBatchAssessing(true);
     setBatchProgress({ current: 0, total: batch.length, failed: 0 });
     let failed = 0;
@@ -105,7 +99,7 @@ export default function LabDetail() {
         const grade = await assessReport(report.file_path, labSheet?.file_path || null, rubric, report.student_name, report.file_name, labSheet?.file_name);
         await updateReportGrade(report.id, grade, false);
       } catch (e: any) {
-        console.error(`Batch assess failed for ${report.file_name}:`, e);
+        console.error(`${label} failed for ${report.file_name}:`, e);
         failed++;
       }
       setBatchProgress({ current: i + 1, total: batch.length, failed });
@@ -113,7 +107,19 @@ export default function LabDetail() {
 
     qc.invalidateQueries({ queryKey: ['reports', labId] });
     setBatchAssessing(false);
-    toast.success(`Batch assessment complete: ${batch.length - failed}/${batch.length} succeeded${failed > 0 ? `, ${failed} failed` : ''}`);
+    toast.success(`${label} complete: ${batch.length - failed}/${batch.length} succeeded${failed > 0 ? `, ${failed} failed` : ''}`);
+  };
+
+  const handleBatchAssess = async () => {
+    const pending = reports.filter((r) => r.status === 'pending');
+    if (pending.length === 0) { toast.info('No pending reports to assess'); return; }
+    await runBatch(pending.slice(0, 200), 'Batch assessment');
+  };
+
+  const handleBatchReassess = async () => {
+    const assessed = reports.filter((r) => r.status === 'assessed' || r.status === 'finalized');
+    if (assessed.length === 0) { toast.info('No assessed reports to reassess'); return; }
+    await runBatch(assessed.slice(0, 200), 'Batch reassessment');
   };
 
   const handleFinalize = async (reportId: string, grade: GradeResult) => {
@@ -239,7 +245,11 @@ export default function LabDetail() {
             </Button>
             <Button size="sm" variant="secondary" className="gap-2" onClick={handleBatchAssess}
               disabled={batchAssessing || !labSheet || reports.filter(r => r.status === 'pending').length === 0}>
-              <PlayCircle className="w-4 h-4" /> {batchAssessing ? `Assessing ${batchProgress.current}/${batchProgress.total}...` : `Batch Assess (${reports.filter(r => r.status === 'pending').length} pending)`}
+              <PlayCircle className="w-4 h-4" /> {batchAssessing ? `${batchProgress.current}/${batchProgress.total}...` : `Batch Assess (${reports.filter(r => r.status === 'pending').length} pending)`}
+            </Button>
+            <Button size="sm" variant="outline" className="gap-2" onClick={handleBatchReassess}
+              disabled={batchAssessing || !labSheet || reports.filter(r => r.status !== 'pending').length === 0}>
+              <Sparkles className="w-4 h-4" /> {`Bulk Reassess (${reports.filter(r => r.status !== 'pending').length})`}
             </Button>
             <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadReportMut.mutate(f); }} />
