@@ -219,13 +219,19 @@ export default function LabDetail() {
                   onClick={() => setSelectedReport(r.id)}>
                   <CardContent className="py-3 px-4">
                     <div className="flex items-center justify-between">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium text-foreground text-sm truncate">{r.student_name || r.file_name}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">{r.student_id || 'No ID'} · {r.upload_date}</p>
                       </div>
-                      <Badge variant="secondary" className={`text-xs shrink-0 ml-2 ${
-                        r.status === 'finalized' ? 'bg-success/10 text-success' : r.status === 'assessed' ? 'bg-info/10 text-info' : 'bg-warning/10 text-warning'
-                      }`}>{r.status}</Badge>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <Badge variant="secondary" className={`text-xs ${
+                          r.status === 'finalized' ? 'bg-success/10 text-success' : r.status === 'assessed' ? 'bg-info/10 text-info' : 'bg-warning/10 text-warning'
+                        }`}>{r.status}</Badge>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); deleteReportMut.mutate(r.id); }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                     {(r.finalGrade || r.aiGrade) && (
                       <p className="text-xs font-medium text-primary mt-1">
