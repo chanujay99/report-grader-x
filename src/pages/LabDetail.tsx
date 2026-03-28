@@ -3,7 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchModules, fetchLabs, fetchLabSheet, fetchReports, uploadLabSheet, uploadReport, uploadReportsBulk, updateReportGrade, updateRubric, assessReport, updateReportInfo, deleteReport } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ArrowLeft, Upload, FileText, Settings2, Download, Sparkles, Check, X, Eye, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Upload, FileText, Settings2, Download, Sparkles, Check, X, Eye, Plus, Trash2, PlayCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,8 @@ export default function LabDetail() {
   const [rubricOpen, setRubricOpen] = useState(false);
   const [editedSections, setEditedSections] = useState<RubricSection[]>([]);
   const [assessingId, setAssessingId] = useState<string | null>(null);
+  const [batchAssessing, setBatchAssessing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, failed: 0 });
 
   const rubric = labSheet?.rubric as any || { sections: defaultRubricSections, totalMax: 100 };
 
@@ -83,6 +86,34 @@ export default function LabDetail() {
     } finally {
       setAssessingId(null);
     }
+  };
+
+  const handleBatchAssess = async () => {
+    const pending = reports.filter((r) => r.status === 'pending');
+    if (pending.length === 0) {
+      toast.info('No pending reports to assess');
+      return;
+    }
+    const batch = pending.slice(0, 200);
+    setBatchAssessing(true);
+    setBatchProgress({ current: 0, total: batch.length, failed: 0 });
+    let failed = 0;
+
+    for (let i = 0; i < batch.length; i++) {
+      const report = batch[i];
+      try {
+        const grade = await assessReport(report.file_path, labSheet?.file_path || null, rubric, report.student_name, report.file_name, labSheet?.file_name);
+        await updateReportGrade(report.id, grade, false);
+      } catch (e: any) {
+        console.error(`Batch assess failed for ${report.file_name}:`, e);
+        failed++;
+      }
+      setBatchProgress({ current: i + 1, total: batch.length, failed });
+    }
+
+    qc.invalidateQueries({ queryKey: ['reports', labId] });
+    setBatchAssessing(false);
+    toast.success(`Batch assessment complete: ${batch.length - failed}/${batch.length} succeeded${failed > 0 ? `, ${failed} failed` : ''}`);
   };
 
   const handleFinalize = async (reportId: string, grade: GradeResult) => {
@@ -199,18 +230,37 @@ export default function LabDetail() {
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()}>
               <Upload className="w-4 h-4" /> Upload Report
             </Button>
             <Button size="sm" variant="outline" className="gap-2" onClick={() => bulkInputRef.current?.click()}>
-              <Upload className="w-4 h-4" /> Bulk Upload
+              <Upload className="w-4 h-4" /> Bulk Upload (max 200)
+            </Button>
+            <Button size="sm" variant="secondary" className="gap-2" onClick={handleBatchAssess}
+              disabled={batchAssessing || !labSheet || reports.filter(r => r.status === 'pending').length === 0}>
+              <PlayCircle className="w-4 h-4" /> {batchAssessing ? `Assessing ${batchProgress.current}/${batchProgress.total}...` : `Batch Assess (${reports.filter(r => r.status === 'pending').length} pending)`}
             </Button>
             <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadReportMut.mutate(f); }} />
             <input ref={bulkInputRef} type="file" accept=".pdf,.doc,.docx" multiple className="hidden"
-              onChange={(e) => { const files = e.target.files; if (files && files.length > 0) bulkUploadMut.mutate(Array.from(files)); }} />
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                  const arr = Array.from(files).slice(0, 200);
+                  if (files.length > 200) toast.warning(`Only the first 200 files will be uploaded (${files.length} selected)`);
+                  bulkUploadMut.mutate(arr);
+                }
+              }} />
           </div>
+          {batchAssessing && (
+            <div className="space-y-1">
+              <Progress value={(batchProgress.current / batchProgress.total) * 100} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                {batchProgress.current}/{batchProgress.total} assessed{batchProgress.failed > 0 ? ` · ${batchProgress.failed} failed` : ''}
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="space-y-2 lg:col-span-1">
