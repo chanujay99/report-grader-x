@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchModules, fetchLabs, fetchLabSheet, fetchReports, uploadLabSheet, uploadReport, uploadReportsBulk, updateReportGrade, updateRubric, assessReport, updateReportInfo } from '@/lib/api';
+import { fetchModules, fetchLabs, fetchLabSheet, fetchReports, uploadLabSheet, uploadReport, uploadReportsBulk, updateReportGrade, updateRubric, assessReport, updateReportInfo, deleteReport } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ArrowLeft, Upload, FileText, Settings2, Download, Sparkles, Check, X, Eye, Plus } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Upload, FileText, Settings2, Download, Sparkles, Check, X, Eye, Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +56,16 @@ export default function LabDetail() {
   const bulkUploadMut = useMutation({
     mutationFn: (files: File[]) => uploadReportsBulk(labId!, files),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['reports', labId] }); toast.success('Reports uploaded'); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteReportMut = useMutation({
+    mutationFn: (id: string) => deleteReport(id),
+    onSuccess: (_, deletedId) => {
+      qc.invalidateQueries({ queryKey: ['reports', labId] });
+      if (selectedReport === deletedId) setSelectedReport(null);
+      toast.success('Report deleted');
+    },
     onError: (e) => toast.error(e.message),
   });
 
@@ -209,13 +219,19 @@ export default function LabDetail() {
                   onClick={() => setSelectedReport(r.id)}>
                   <CardContent className="py-3 px-4">
                     <div className="flex items-center justify-between">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium text-foreground text-sm truncate">{r.student_name || r.file_name}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">{r.student_id || 'No ID'} · {r.upload_date}</p>
                       </div>
-                      <Badge variant="secondary" className={`text-xs shrink-0 ml-2 ${
-                        r.status === 'finalized' ? 'bg-success/10 text-success' : r.status === 'assessed' ? 'bg-info/10 text-info' : 'bg-warning/10 text-warning'
-                      }`}>{r.status}</Badge>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <Badge variant="secondary" className={`text-xs ${
+                          r.status === 'finalized' ? 'bg-success/10 text-success' : r.status === 'assessed' ? 'bg-info/10 text-info' : 'bg-warning/10 text-warning'
+                        }`}>{r.status}</Badge>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); deleteReportMut.mutate(r.id); }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                     {(r.finalGrade || r.aiGrade) && (
                       <p className="text-xs font-medium text-primary mt-1">
