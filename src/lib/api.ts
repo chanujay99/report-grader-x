@@ -114,6 +114,26 @@ export async function updateRubric(labSheetId: string, rubric: Json) {
   if (error) throw error;
 }
 
+export async function copyRubricToLab(sourceLabSheetId: string, targetLabId: string) {
+  // Get source rubric
+  const { data: source, error: srcErr } = await supabase.from('lab_sheets').select('rubric').eq('id', sourceLabSheetId).single();
+  if (srcErr) throw srcErr;
+
+  // Check if target lab has a lab sheet
+  const { data: target, error: tgtErr } = await supabase.from('lab_sheets').select('id').eq('lab_id', targetLabId).maybeSingle();
+  if (tgtErr) throw tgtErr;
+  if (!target) throw new Error('Target lab has no lab sheet. Upload a lab sheet first.');
+
+  const { error } = await supabase.from('lab_sheets').update({ rubric: source.rubric }).eq('id', target.id);
+  if (error) throw error;
+}
+
+export async function fetchAllLabs() {
+  const { data, error } = await supabase.from('labs').select('*, modules(name, code)').order('created_at');
+  if (error) throw error;
+  return data;
+}
+
 // Reports
 export async function fetchReports(labId: string) {
   const { data, error } = await supabase
