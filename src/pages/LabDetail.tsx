@@ -88,6 +88,34 @@ export default function LabDetail() {
     }
   };
 
+  const handleBatchAssess = async () => {
+    const pending = reports.filter((r) => r.status === 'pending');
+    if (pending.length === 0) {
+      toast.info('No pending reports to assess');
+      return;
+    }
+    const batch = pending.slice(0, 200);
+    setBatchAssessing(true);
+    setBatchProgress({ current: 0, total: batch.length, failed: 0 });
+    let failed = 0;
+
+    for (let i = 0; i < batch.length; i++) {
+      const report = batch[i];
+      try {
+        const grade = await assessReport(report.file_path, labSheet?.file_path || null, rubric, report.student_name, report.file_name, labSheet?.file_name);
+        await updateReportGrade(report.id, grade, false);
+      } catch (e: any) {
+        console.error(`Batch assess failed for ${report.file_name}:`, e);
+        failed++;
+      }
+      setBatchProgress({ current: i + 1, total: batch.length, failed });
+    }
+
+    qc.invalidateQueries({ queryKey: ['reports', labId] });
+    setBatchAssessing(false);
+    toast.success(`Batch assessment complete: ${batch.length - failed}/${batch.length} succeeded${failed > 0 ? `, ${failed} failed` : ''}`);
+  };
+
   const handleFinalize = async (reportId: string, grade: GradeResult) => {
     await updateReportGrade(reportId, grade, true);
     qc.invalidateQueries({ queryKey: ['reports', labId] });
