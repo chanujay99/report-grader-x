@@ -348,6 +348,11 @@ function AssessmentPanel({ report, rubric, onAssess, onFinalize, assessing, onUp
                   <Sparkles className="w-4 h-4" />{assessing ? 'Assessing...' : 'AI Assess'}
                 </Button>
               )}
+              {report.status !== 'pending' && (
+                <Button variant="outline" size="sm" onClick={onAssess} disabled={assessing} className="gap-2">
+                  <Sparkles className="w-4 h-4" />{assessing ? 'Reassessing...' : 'Reassess'}
+                </Button>
+              )}
               {grade && !editingGrade && report.status !== 'finalized' && (
                 <>
                   <Button variant="outline" size="sm" onClick={() => setEditingGrade(JSON.parse(JSON.stringify(grade)))} className="gap-2">
