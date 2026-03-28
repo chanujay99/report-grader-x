@@ -39,6 +39,8 @@ export default function LabDetail() {
   const [rubricOpen, setRubricOpen] = useState(false);
   const [editedSections, setEditedSections] = useState<RubricSection[]>([]);
   const [assessingId, setAssessingId] = useState<string | null>(null);
+  const [batchAssessing, setBatchAssessing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, failed: 0 });
 
   const rubric = labSheet?.rubric as any || { sections: defaultRubricSections, totalMax: 100 };
 
