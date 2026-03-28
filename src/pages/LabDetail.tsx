@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchModules, fetchLabs, fetchLabSheet, fetchReports, uploadLabSheet, uploadReport, uploadReportsBulk, updateReportGrade, updateRubric, assessReport, updateReportInfo, deleteReport } from '@/lib/api';
+import { fetchModules, fetchLabs, fetchLabSheet, fetchReports, uploadLabSheet, uploadReport, uploadReportsBulk, updateReportGrade, updateRubric, assessReport, updateReportInfo, deleteReport, copyRubricToLab, fetchAllLabs } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ArrowLeft, Upload, FileText, Settings2, Download, Sparkles, Check, X, Eye, Plus, Trash2, PlayCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
