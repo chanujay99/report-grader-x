@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
@@ -41,6 +42,9 @@ export default function LabDetail() {
   const [assessingId, setAssessingId] = useState<string | null>(null);
   const [batchAssessing, setBatchAssessing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, failed: 0 });
+  const [copyTargetLabId, setCopyTargetLabId] = useState<string>('');
+
+  const { data: allLabs = [] } = useQuery({ queryKey: ['allLabs'], queryFn: fetchAllLabs });
 
   const rubric = labSheet?.rubric as any || { sections: defaultRubricSections, totalMax: 100 };
 
@@ -355,6 +359,31 @@ export default function LabDetail() {
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Total: {editedSections.reduce((a, s) => a + s.maxScore, 0)} marks</span>
               <Button onClick={saveRubric}>Save Rubric</Button>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground flex items-center gap-2"><Copy className="w-4 h-4" /> Copy Rubric to Another Lab</p>
+              <div className="flex gap-2">
+                <Select value={copyTargetLabId} onValueChange={setCopyTargetLabId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select target lab" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allLabs.filter((l: any) => l.id !== labId).map((l: any) => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {(l.modules as any)?.code} — Lab {l.lab_number}: {l.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" disabled={!copyTargetLabId || !labSheet} onClick={async () => {
+                  try {
+                    await copyRubricToLab(labSheet!.id, copyTargetLabId);
+                    toast.success('Rubric copied successfully');
+                    setCopyTargetLabId('');
+                  } catch (e: any) { toast.error(e.message); }
+                }}>Copy</Button>
+              </div>
             </div>
           </div>
         </DialogContent>
