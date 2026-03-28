@@ -152,6 +152,21 @@ export async function uploadReportsBulk(labId: string, files: File[]) {
   return results;
 }
 
+export async function deleteReport(id: string) {
+  // First get the report to find the file path
+  const { data: report, error: fetchError } = await supabase.from('reports').select('file_path').eq('id', id).single();
+  if (fetchError) throw fetchError;
+  
+  // Delete the file from storage
+  if (report?.file_path) {
+    await supabase.storage.from('reports').remove([report.file_path]);
+  }
+  
+  // Delete the database record
+  const { error } = await supabase.from('reports').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export async function updateReportInfo(reportId: string, studentName: string, studentId: string) {
   const { error } = await supabase
     .from('reports')
