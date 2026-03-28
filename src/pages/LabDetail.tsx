@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchModules, fetchLabs, fetchLabSheet, fetchReports, uploadLabSheet, uploadReport, uploadReportsBulk, updateReportGrade, updateRubric, assessReport, updateReportInfo, deleteReport } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ArrowLeft, Upload, FileText, Settings2, Download, Sparkles, Check, X, Eye, Plus } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Upload, FileText, Settings2, Download, Sparkles, Check, X, Eye, Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
