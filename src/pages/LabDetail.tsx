@@ -126,6 +126,21 @@ export default function LabDetail() {
     await runBatch(assessed.slice(0, 200), 'Batch reassessment');
   };
 
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+
+  const handleDeleteAll = async () => {
+    if (reports.length === 0) { toast.info('No reports to delete'); return; }
+    setDeleteAllConfirm(false);
+    const total = reports.length;
+    let failed = 0;
+    for (const r of reports) {
+      try { await deleteReport(r.id); } catch { failed++; }
+    }
+    qc.invalidateQueries({ queryKey: ['reports', labId] });
+    setSelectedReport(null);
+    toast.success(`Deleted ${total - failed}/${total} reports${failed > 0 ? `, ${failed} failed` : ''}`);
+  };
+
   const handleFinalize = async (reportId: string, grade: GradeResult) => {
     await updateReportGrade(reportId, grade, true);
     qc.invalidateQueries({ queryKey: ['reports', labId] });
