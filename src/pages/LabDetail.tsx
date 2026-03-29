@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchModules, fetchLabs, fetchLabSheet, fetchReports, uploadLabSheet, uploadReport, uploadReportsBulk, updateReportGrade, updateRubric, assessReport, updateReportInfo, deleteReport, copyRubricToLab, fetchAllLabs } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ArrowLeft, Upload, FileText, Settings2, Download, Sparkles, Check, X, Eye, Plus, Trash2, PlayCircle, Copy } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Upload, FileText, Settings2, Download, Sparkles, Check, X, Eye, Plus, Trash2, PlayCircle, Copy, AlertTriangle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -270,6 +270,27 @@ export default function LabDetail() {
               disabled={batchAssessing || !labSheet || reports.filter(r => r.status !== 'pending').length === 0}>
               <Sparkles className="w-4 h-4" /> {`Bulk Reassess (${reports.filter(r => r.status !== 'pending').length})`}
             </Button>
+            <AlertDialog open={deleteAllConfirm} onOpenChange={setDeleteAllConfirm}>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" className="gap-2" disabled={reports.length === 0}>
+                  <Trash2 className="w-4 h-4" /> Delete All ({reports.length})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete all reports?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete all {reports.length} reports in this lab, including their files and any grades. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete All
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadReportMut.mutate(f); }} />
             <input ref={bulkInputRef} type="file" accept=".pdf,.doc,.docx" multiple className="hidden"
