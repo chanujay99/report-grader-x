@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { reportContent, labSheetContent, rubric, studentName } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const systemPrompt = `You are an expert university lab report assessor. You will be given:
 1. A lab sheet (the original assignment instructions)
@@ -23,7 +23,15 @@ Your job is to:
 - Grade each rubric section with a score (0 to max) and specific feedback
 - Provide overall feedback
 
-You MUST respond using the assess_report tool/function provided. Be fair, constructive, and specific in feedback.`;
+You MUST respond with valid JSON in this exact format:
+{
+  "sectionScores": [
+    { "sectionId": "...", "score": <number>, "feedback": "..." }
+  ],
+  "overallFeedback": "..."
+}
+
+Be fair, constructive, and specific in feedback. Scores must be between 0 and the max score for each section.`;
 
     const userPrompt = `
 ## Lab Sheet Instructions:
@@ -35,12 +43,12 @@ ${reportContent || "No content could be extracted from the report."}
 ## Marking Rubric:
 ${JSON.stringify(rubric.sections.map((s: any) => ({ id: s.id, name: s.name, maxScore: s.maxScore, description: s.description })), null, 2)}
 
-Please assess this report against the lab sheet and rubric.`;
+Please assess this report against the lab sheet and rubric. Respond ONLY with the JSON object.`;
 
     const models = [
-      "openai/gpt-5.2",
-      "google/gemini-3-flash-preview",
-      "google/gemini-2.5-flash",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
     ];
 
     let lastError = "";
@@ -48,49 +56,19 @@ Please assess this report against the lab sheet and rubric.`;
     for (const model of models) {
       try {
         console.log(`Trying model: ${model}`);
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+        const response = await fetch(url, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
+            contents: [
+              { role: "user", parts: [{ text: systemPrompt + "\n\n" + userPrompt }] },
             ],
-            tools: [
-              {
-                type: "function",
-                function: {
-                  name: "assess_report",
-                  description: "Submit the assessment result for a student lab report",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      sectionScores: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            sectionId: { type: "string" },
-                            score: { type: "number" },
-                            feedback: { type: "string" },
-                          },
-                          required: ["sectionId", "score", "feedback"],
-                          additionalProperties: false,
-                        },
-                      },
-                      overallFeedback: { type: "string" },
-                    },
-                    required: ["sectionScores", "overallFeedback"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-            ],
-            tool_choice: { type: "function", function: { name: "assess_report" } },
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.3,
+            },
           }),
         });
 
@@ -98,12 +76,6 @@ Please assess this report against the lab sheet and rubric.`;
           console.log(`Rate limited on ${model}, trying next...`);
           lastError = `Rate limited on ${model}`;
           continue;
-        }
-        if (response.status === 402) {
-          return new Response(
-            JSON.stringify({ error: "AI credits exhausted. Please add funds in Settings → Workspace → Usage." }),
-            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
         }
         if (!response.ok) {
           const t = await response.text();
@@ -113,13 +85,13 @@ Please assess this report against the lab sheet and rubric.`;
         }
 
         const data = await response.json();
-        const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-        if (!toolCall) {
-          lastError = `${model} did not return tool call`;
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          lastError = `${model} returned no content`;
           continue;
         }
 
-        const result = JSON.parse(toolCall.function.arguments);
+        const result = JSON.parse(text);
         const totalScore = result.sectionScores.reduce((a: number, s: any) => a + s.score, 0);
 
         return new Response(
