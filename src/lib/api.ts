@@ -2,6 +2,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { GradeResult } from '@/types';
 import type { Json } from '@/integrations/supabase/types';
 
+declare const puter: any;
+
 // Helper to convert Json to GradeResult
 function jsonToGrade(j: Json | null): GradeResult | undefined {
   if (!j || typeof j !== 'object' || Array.isArray(j)) return undefined;
