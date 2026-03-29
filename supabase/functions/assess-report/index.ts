@@ -67,6 +67,7 @@ Please assess this report against the lab sheet and rubric. Respond ONLY with th
             ],
             generationConfig: {
               responseMimeType: "application/json",
+              maxOutputTokens: 8192,
               temperature: 0.3,
             },
           }),
