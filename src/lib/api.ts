@@ -2,8 +2,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { GradeResult } from '@/types';
 import type { Json } from '@/integrations/supabase/types';
 
-declare const puter: any;
-
 // Helper to convert Json to GradeResult
 function jsonToGrade(j: Json | null): GradeResult | undefined {
   if (!j || typeof j !== 'object' || Array.isArray(j)) return undefined;
@@ -244,7 +242,7 @@ async function extractTextFromFile(bucket: string, filePath: string, fileName: s
   return await data.text();
 }
 
-// AI Assessment via Puter.js (free, no API key needed)
+// AI Assessment
 export async function assessReport(
   reportFilePath: string,
   labSheetFilePath: string | null,
@@ -261,62 +259,16 @@ export async function assessReport(
     labSheetContent = await extractTextFromFile('lab-sheets', labSheetFilePath, labSheetFileName);
   }
 
-  const prompt = `You are an expert university lab report assessor. You will be given:
-1. A lab sheet (the original assignment instructions)
-2. A student's lab report submission
-3. A marking rubric with sections and max scores
+  const { data, error } = await supabase.functions.invoke('assess-report', {
+    body: {
+      reportContent,
+      labSheetContent,
+      rubric,
+      studentName,
+    },
+  });
 
-Your job is to:
-- Compare the student's report against the lab sheet requirements
-- Grade each rubric section with a score (0 to max) and specific feedback
-- Provide overall feedback
-
-You MUST respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
-{
-  "sectionScores": [
-    { "sectionId": "<id>", "score": <number>, "feedback": "<text>" }
-  ],
-  "overallFeedback": "<text>"
-}
-
-## Lab Sheet Instructions:
-${labSheetContent || "No lab sheet provided - assess based on general lab report standards."}
-
-## Student Report (${studentName || "Unknown Student"}):
-${reportContent || "No content could be extracted from the report."}
-
-## Marking Rubric:
-${JSON.stringify(rubric.sections.map((s: any) => ({ id: s.id, name: s.name, maxScore: s.maxScore, description: s.description })), null, 2)}
-
-Please assess this report against the lab sheet and rubric. Respond ONLY with the JSON object.`;
-
-  if (typeof puter === 'undefined') {
-    throw new Error('Puter.js is not loaded. Please refresh the page.');
-  }
-
-  const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet' });
-  const text = response?.message?.content;
-  if (!text) throw new Error('AI returned no response');
-
-  // Extract JSON from the response (handle possible markdown fences)
-  let jsonStr = text.trim();
-  const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenceMatch) jsonStr = fenceMatch[1].trim();
-
-  let result;
-  try {
-    result = JSON.parse(jsonStr);
-  } catch {
-    throw new Error('Failed to parse AI response as JSON');
-  }
-
-  const totalScore = result.sectionScores.reduce((a: number, s: any) => a + s.score, 0);
-
-  return {
-    sectionScores: result.sectionScores,
-    totalScore,
-    totalMax: rubric.totalMax,
-    overallFeedback: result.overallFeedback,
-    model: 'puter-ai',
-  };
+  if (error) throw new Error(error.message || 'Assessment failed');
+  if (data.error) throw new Error(data.error);
+  return data;
 }
