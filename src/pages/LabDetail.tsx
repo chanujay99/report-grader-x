@@ -403,7 +403,14 @@ export default function LabDetail() {
 
       <Dialog open={rubricOpen} onOpenChange={setRubricOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Edit Marking Rubric</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <div className="flex items-center justify-between pr-6">
+              <DialogTitle>Edit Marking Rubric</DialogTitle>
+              <Button variant="outline" size="sm" onClick={handleDownloadRubric} className="gap-2">
+                <Download className="w-4 h-4" /> Download .txt
+              </Button>
+            </div>
+          </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             {editedSections.map((sec, idx) => (
               <div key={sec.id} className="space-y-2 p-3 rounded-lg bg-muted/50">
