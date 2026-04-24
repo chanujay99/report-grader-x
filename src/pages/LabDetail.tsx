@@ -170,6 +170,33 @@ export default function LabDetail() {
     setRubricOpen(true);
   };
 
+  const handleDownloadRubric = () => {
+    const sections = (rubric.sections || []) as RubricSection[];
+    const totalMax = sections.reduce((a, s) => a + (s.maxScore || 0), 0);
+    const lines: string[] = [];
+    lines.push(`Marking Rubric`);
+    lines.push(`Module: ${mod?.code || ''} — ${mod?.name || ''}`);
+    lines.push(`Lab ${lab?.lab_number || ''}: ${lab?.name || ''}`);
+    lines.push(`Total Marks: ${totalMax}`);
+    lines.push(`Generated: ${new Date().toLocaleString()}`);
+    lines.push(``);
+    lines.push(`=`.repeat(60));
+    lines.push(``);
+    sections.forEach((s, i) => {
+      lines.push(`${i + 1}. ${s.name}  (${s.maxScore} marks)`);
+      if (s.description) lines.push(`   ${s.description}`);
+      lines.push(``);
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${mod?.code || 'lab'}_Lab${lab?.lab_number || ''}_rubric.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Rubric downloaded');
+  };
+
   const saveRubric = async () => {
     if (!labSheet) return;
     const total = editedSections.reduce((a, s) => a + s.maxScore, 0);
